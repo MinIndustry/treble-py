@@ -1,0 +1,16 @@
+[package]
+name = "rustic-py"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "rustic_py"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+numpy = "0.28.0"
+pyo3 = { version = "0.28.2", features = ["extension-module", "abi3-py39"] }
+rustic = { version = "0.1.0", path = "../rustic", default-features = false }
+rustic-meta = { version = "0.1.0", path = "../rustic-meta" }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
