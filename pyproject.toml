@@ -13,3 +13,5 @@ dev = ["maturin>=1.5,<2.0"]
 
 [tool.maturin]
 manifest-path = "Cargo.toml"
+python-source = "python"
+
