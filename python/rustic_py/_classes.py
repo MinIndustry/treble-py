@@ -1,8 +1,16 @@
+from __future__ import annotations
+
+from collections.abc import Callable
 from dataclasses import dataclass, field, make_dataclass
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import numpy as np
+
 from .rustic_py import available_filters, available_sources
 
 # Helpers
-def _field_spec(params: dict[str, dict]) -> tuple:
+def _field_spec(params: dict[str, dict]) -> tuple[str, type, Any]:
     """Convert one ParameterDict into make_dataclass 3 field tuple"""
     (kind, data), = params.items()
     name = data["field_name"]
@@ -20,7 +28,7 @@ def _field_spec(params: dict[str, dict]) -> tuple:
         raise ValueError(f"Unknown parameter kind: {kind!r}")
 
 
-def _build_validator(inputs: list[dict]):
+def _build_validator(inputs: list[dict]) -> Callable[..., None] | None:
     """Returns a __post_init__ to validate ranges/int bounds"""
     checks = []
     for inp in inputs:
@@ -50,7 +58,7 @@ def _build_validator(inputs: list[dict]):
 
     return __post_init__
 
-def _make_filter_class(info: dict) -> type:
+def _make_filter_class(info: dict[str, Any]) -> type:
     """Generates a dataclass from a FilterInfo dict"""
     type_id = info["type_id"]
     inputs = info["inputs"]
@@ -95,7 +103,7 @@ class SourceSpec:
             if val < 0.001:
                 raise ValueError(f"{name}={val!r} must be >= 0.001")
 
-    def to_spec(self) -> dict:
+    def to_spec(self) -> dict[str, Any]:
         return {
             "waveform": self.waveform,
             "frequency_relation": self.frequency_relation,
@@ -127,7 +135,7 @@ class GraphSpec:
         if self.duration < self.note_off:
             raise ValueError(f"duration={self.duration!r} must be >= note_off={self.note_off!r}")
 
-    def to_spec(self) -> dict:
+    def to_spec(self) -> dict[str, Any]:
         return {
             "note": self.note,
             "note_on": self.note_on,
@@ -139,7 +147,7 @@ class GraphSpec:
             "filters": [f.to_spec() for f in self.filters],
         }
 
-    def render(self):
+    def render(self) -> np.ndarray:
         from .rustic_py import render as _render
         return _render(self.to_spec())
 

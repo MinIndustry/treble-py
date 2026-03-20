@@ -1,2 +1,2 @@
 __pycache__/
-*.abi3.so
+*/*.abi3.so

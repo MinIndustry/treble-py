@@ -20,12 +20,19 @@ use spec::GraphSpec;
 ///
 /// Example::
 ///
-///     audio = rustic_py.render({
-///         "note": 60, "note_on": 0.0, "note_off": 0.5, "duration": 0.7,
-///         "source": {"waveform": "sine", "attack": 0.01, "decay": 0.1,
-///                    "sustain": 0.8, "release": 0.2},
-///         "filters": [{"type": "lowpass", "params": {"cutoff_frequency": 2000.0}}],
-///     })
+/// ```py
+/// import rustic_py
+/// import soundfile as sf
+///
+/// audio = rustic_py.render({
+///     "note": 60, "note_on": 0.0, "note_off": 0.5, "duration": 0.7,
+///     "source": {"waveform": "sine", "attack": 0.01, "decay": 0.1,
+///                "sustain": 0.8, "release": 0.2},
+///     "filters": [{"type": "lowpass", "params": {"cutoff_frequency": 2000.0}}],
+/// })
+/// # audio.shape == (N, 2), dtype float32
+/// sf.write("out.wav", audio, samplerate=44100)
+/// ```
 #[pyfunction]
 fn render<'py>(
     py: Python<'py>,
@@ -51,6 +58,18 @@ fn render<'py>(
 ///
 /// Returns:
 ///     list of dicts, each with keys: name, description, inputs, outputs.
+///
+/// Example::
+///
+/// ```py
+/// import rustic_py
+///
+/// for f in rustic_py.available_filters():
+///     print(f["name"], "-", f["description"])
+/// # lowpass - A simple lowpass filter
+/// # highpass - A simple highpass filter
+/// # ...
+/// ```
 #[pyfunction]
 fn available_filters(py: Python<'_>) -> PyResult<Py<PyAny>> {
     let filters = rustic::meta::get_filters();
@@ -66,6 +85,19 @@ fn available_filters(py: Python<'_>) -> PyResult<Py<PyAny>> {
 ///
 /// Returns:
 ///     list of dicts, each with keys: name, type_id, description, parameters, output_count.
+///
+/// Example::
+///
+/// ```py
+/// import rustic_py
+///
+/// for s in rustic_py.available_sources():
+///     params = [p["name"] for p in s["parameters"]]
+///     print(f'{s["name"]}: {", ".join(params)}')
+/// # sine: attack, decay, sustain, release
+/// # square: attack, decay, sustain, release
+/// # ...
+/// ```
 #[pyfunction]
 fn available_sources(py: Python<'_>) -> PyResult<Py<PyAny>> {
     let generators = rustic::meta::get_generators();

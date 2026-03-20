@@ -6,10 +6,16 @@ build-backend = "maturin"
 name = "rustic-py"
 version = "0.1.0"
 requires-python = ">=3.9"
-dependencies = ["numpy>=1.24"]
+dependencies = [
+    "numpy>=1.24",
+    "pdoc>=15.0.4",
+]
 
 [dependency-groups]
-dev = ["maturin>=1.5,<2.0"]
+dev = [
+    "maturin>=1.5,<2.0",
+    "pdoc>=15.0.4",
+]
 
 [tool.maturin]
 manifest-path = "Cargo.toml"
