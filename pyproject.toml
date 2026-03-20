@@ -8,13 +8,14 @@ version = "0.1.0"
 requires-python = ">=3.9"
 dependencies = [
     "numpy>=1.24",
-    "pdoc>=15.0.4",
 ]
 
 [dependency-groups]
 dev = [
     "maturin>=1.5,<2.0",
-    "pdoc>=15.0.4",
+    "mkdocs-material>=9.0",
+    "mkdocstrings[python]>=0.25",
+    "mike>=2.0",
 ]
 
 [tool.maturin]
