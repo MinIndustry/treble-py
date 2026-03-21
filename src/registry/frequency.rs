@@ -16,25 +16,25 @@ fn parse_relation_string(s: &str) -> FrequencyRelation {
     if s == "identity" {
         return FrequencyRelation::Identity;
     }
-    if let Some(rest) = s.strip_prefix("harmonic:") {
-        if let Ok(n) = rest.parse::<u8>() {
-            return FrequencyRelation::Harmonic(n);
-        }
+    if let Some(rest) = s.strip_prefix("harmonic:")
+        && let Ok(n) = rest.parse::<u8>()
+    {
+        return FrequencyRelation::Harmonic(n);
     }
-    if let Some(rest) = s.strip_prefix("ratio:") {
-        if let Ok(f) = rest.parse::<f32>() {
-            return FrequencyRelation::Ratio(f);
-        }
+    if let Some(rest) = s.strip_prefix("ratio:")
+        && let Ok(f) = rest.parse::<f32>()
+    {
+        return FrequencyRelation::Ratio(f);
     }
-    if let Some(rest) = s.strip_prefix("semitones:") {
-        if let Ok(i) = rest.parse::<i32>() {
-            return FrequencyRelation::Semitones(i);
-        }
+    if let Some(rest) = s.strip_prefix("semitones:")
+        && let Ok(i) = rest.parse::<i32>()
+    {
+        return FrequencyRelation::Semitones(i);
     }
-    if let Some(rest) = s.strip_prefix("offset:") {
-        if let Ok(f) = rest.parse::<f32>() {
-            return FrequencyRelation::Offset(f);
-        }
+    if let Some(rest) = s.strip_prefix("offset:")
+        && let Ok(f) = rest.parse::<f32>()
+    {
+        return FrequencyRelation::Offset(f);
     }
     FrequencyRelation::Identity
 }
