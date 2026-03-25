@@ -85,32 +85,59 @@ def _make_filter_class(info: dict[str, Any]) -> type:
 
 
 @dataclass
+class ADSRSpec:
+    # Each tuple: (duration, peak, control_time, control_peak) for Bezier curve
+    attack:  tuple = (0.01, 1.0, 0.01, 0.0)
+    decay:   tuple = (0.1,  0.8, 0.1,  1.0)
+    sustain: float = 0.8
+    release: tuple = (0.2,  0.0, 0.0,  0.0)
+
+    def to_spec(self) -> dict[str, Any]:
+        return {
+            "attack":  list(self.attack),
+            "decay":   list(self.decay),
+            "sustain": self.sustain,
+            "release": list(self.release),
+        }
+
+
+@dataclass
 class SourceSpec:
     waveform: str = "sine"
     frequency_relation: str = "identity"
-    attack: float = 0.01
-    decay: float = 0.01
-    sustain: float = 0.08
-    release: float = 0.03
+    envelope: ADSRSpec = field(default_factory=ADSRSpec)
 
     def __post_init__(self):
         valid = [s["type_id"] for s in available_sources()]
         if self.waveform not in valid:
             raise ValueError(f"waveform must be one of {valid!r}, got {self.waveform!r}")
-        if not (0.0 <= self.sustain <= 1.0):
-            raise ValueError(f"sustain={self.sustain!r} must be in [0.0, 1.0]")
-        for name, val in [("attack", self.attack), ("decay", self.decay), ("release", self.release)]:
-            if val < 0.001:
-                raise ValueError(f"{name}={val!r} must be >= 0.001")
 
     def to_spec(self) -> dict[str, Any]:
         return {
             "waveform": self.waveform,
             "frequency_relation": self.frequency_relation,
-            "attack": self.attack,
-            "decay": self.decay,
-            "sustain": self.sustain,
-            "release": self.release,
+            "envelope": self.envelope.to_spec(),
+        }
+
+
+@dataclass
+class MultiSourceSpec:
+    sources: list
+    base_frequency: float = 440.0
+    mix_mode: str = "Average"  # "Sum" | "Average" | "Max" | "Min"
+    glob_ampl: ADSRSpec = field(default_factory=ADSRSpec)
+
+    def __post_init__(self):
+        valid = {"Sum", "Average", "Max", "Min"}
+        if self.mix_mode not in valid:
+            raise ValueError(f"mix_mode must be one of {valid!r}, got {self.mix_mode!r}")
+
+    def to_spec(self) -> dict[str, Any]:
+        return {
+            "sources": [s.to_spec() for s in self.sources],
+            "base_frequency": self.base_frequency,
+            "mix_mode": self.mix_mode,
+            "glob_ampl": self.glob_ampl.to_spec(),
         }
 
 
@@ -120,8 +147,9 @@ class GraphSpec:
     note_on: float
     note_off: float
     duration: float
-    source: SourceSpec
+    source: MultiSourceSpec
     filters: list = field(default_factory=list)
+    connections: list = field(default_factory=list)
     sample_rate: float = 44100.0
     block_size: int = 512
 
@@ -145,6 +173,7 @@ class GraphSpec:
             "block_size": self.block_size,
             "source": self.source.to_spec(),
             "filters": [f.to_spec() for f in self.filters],
+            "connections": self.connections,
         }
 
     def render(self) -> np.ndarray:
