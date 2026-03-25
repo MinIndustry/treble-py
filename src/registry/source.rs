@@ -73,6 +73,7 @@ pub fn build_source(spec: &MultiSourceSpec, sample_rate: f32) -> Box<dyn Source>
     let multi = builder
         .mix_mode(spec.mix_mode.clone())
         .amplitude_envelope(Some(Box::new(glob_ampl_adsr)))
+        .frequency(spec.base_frequency)
         .build();
 
     Box::new(MonophonicSource::new(
