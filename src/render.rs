@@ -4,6 +4,28 @@ use rustic::core::graph::{SimpleSink, System};
 use crate::registry::{build_filter, build_source};
 use crate::spec::GraphSpec;
 
+fn check_source_index(idx: usize, system: &System) -> Result<(), String> {
+    if system.sources_len() <= idx {
+        Err(format!(
+            "Source index `{idx}` does not correspond to any source (system contains {} source(s))",
+            system.sources_len()
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+fn check_filter_index<T>(idx: usize, node_map: &Vec<T>) -> Result<(), String> {
+    if node_map.len() <= idx {
+        Err(format!(
+            "Filter index `{idx}` does not correspond to any filter (system contains {} filter(s))",
+            node_map.len()
+        ))
+    } else {
+        Ok(())
+    }
+}
+
 /// Perform a headless offline render of a `GraphSpec`.
 ///
 /// Returns interleaved stereo frames: `Vec<[f32; 2]>` with exactly
@@ -23,6 +45,31 @@ pub fn render_graph(spec: &GraphSpec) -> Result<Vec<[f32; 2]>, String> {
             .map(|fs| build_filter(fs, spec.sample_rate).map(|f| system.add_filter(f)))
             .collect::<Result<Vec<_>, _>>()?;
 
+        for connection in &spec.connections {
+            match connection {
+                crate::spec::ConnectionType::SourceSink { source, sink } => {
+                    check_source_index(*source, &system)?;
+                    system.connect_source_to_sink(*source, *sink);
+                }
+                crate::spec::ConnectionType::FilterSink { filter, sink } => {
+                    check_filter_index(*filter, &nodes)?;
+                    system.connect_sink(nodes[*filter], *sink, 0);
+                }
+                crate::spec::ConnectionType::SourceFilter { source, filter } => {
+                    check_filter_index(*filter, &nodes)?;
+                    check_source_index(*source, &system)?;
+                    system.connect_source(*source, nodes[*filter], 0);
+                }
+                crate::spec::ConnectionType::FilterFilter {
+                    filter_out,
+                    filter_in,
+                } => {
+                    check_filter_index(*filter_out, &nodes)?;
+                    check_filter_index(*filter_in, &nodes)?;
+                    system.connect(nodes[*filter_out], nodes[*filter_in], 0, 0);
+                }
+            }
+        }
         system.connect_source(src_idx, nodes[0], 0);
         for i in 1..nodes.len() {
             system.connect(nodes[i - 1], nodes[i], 0, 0);

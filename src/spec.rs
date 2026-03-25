@@ -5,29 +5,43 @@ use serde::Deserialize;
 fn default_sample_rate() -> f32 {
     44100.0
 }
+
 fn default_block_size() -> usize {
     512
 }
+
 fn default_waveform() -> String {
     "sine".to_string()
 }
-fn default_attack() -> f32 {
-    0.01
+
+fn default_attack() -> (f32, f32, f32, f32) {
+    (0.01, 1.0, 0.01, 0.0)
 }
-fn default_decay() -> f32 {
-    0.1
+
+fn default_decay() -> (f32, f32, f32, f32) {
+    (0.1, 0.8, 0.1, 1.0)
 }
+
 fn default_sustain() -> f32 {
     0.8
 }
-fn default_release() -> f32 {
-    0.2
+
+fn default_release() -> (f32, f32, f32, f32) {
+    (0.2, 0.0, 0.0, 0.0)
+}
+
+#[derive(Debug, Deserialize)]
+pub enum ConnectionType {
+    SourceFilter { source: usize, filter: usize },
+    SourceSink { source: usize, sink: usize },
+    FilterFilter { filter_out: usize, filter_in: usize },
+    FilterSink { filter: usize, sink: usize },
 }
 
 /// Top-level render request from Python.
 #[derive(Debug, Deserialize)]
 pub struct GraphSpec {
-    /// MIDI note number (0–127). 60 = C4 (middle C).
+    /// MIDI Note number (0-127)
     pub note: u8,
     /// Seconds from t=0 to note-on event.
     pub note_on: f32,
@@ -41,34 +55,55 @@ pub struct GraphSpec {
     /// Block size for System::run(). Lower = more timing precision, higher = faster.
     #[serde(default = "default_block_size")]
     pub block_size: usize,
-    /// The single source (oscillator + ADSR).
-    pub source: SourceSpec,
-    /// Zero or more filters applied in sequence (linear chain, source → f0 → f1 → … → sink).
+    /// A Single mutli-source, with each sub-source having its own parameters
+    pub source: MultiSourceSpec,
+    /// Zero or more filters to be added to the graph
     #[serde(default)]
     pub filters: Vec<FilterSpec>,
+    /// All the connections in the graph
+    pub connections: Vec<ConnectionType>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ADSRSpec {
+    /// Attack description: duration, peak, control_time (x), control_peak (y)
+    #[serde(default = "default_attack")]
+    pub attack: (f32, f32, f32, f32),
+    /// Decay description:
+    #[serde(default = "default_decay")]
+    pub decay: (f32, f32, f32, f32),
+    /// Sustain is a single value, duration depends on note_off.
+    #[serde(default = "default_sustain")]
+    pub sustain: f32,
+    #[serde(default = "default_release")]
+    pub release: (f32, f32, f32, f32),
 }
 
 /// Describes the monophonic source (one oscillator voice).
 #[derive(Debug, Deserialize)]
 pub struct SourceSpec {
-    /// Waveform: "sine" | "square" | "sawtooth" | "triangle" | "whitenoise" | "pinknoise" | "blank"
+    /// Waveform:
+    /// "sine" | "square" | "sawtooth" | "triangle"
+    /// "whitenoise" | "pinknoise" | "blank"
     #[serde(default = "default_waveform")]
     pub waveform: String,
     /// How this tone's frequency relates to the MIDI note frequency.
     #[serde(default)]
     pub frequency_relation: FrequencyRelationSpec,
-    /// Amplitude envelope — attack time in seconds.
-    #[serde(default = "default_attack")]
-    pub attack: f32,
-    /// Amplitude envelope — decay time in seconds.
-    #[serde(default = "default_decay")]
-    pub decay: f32,
-    /// Amplitude envelope — sustain level (0.0–1.0).
-    #[serde(default = "default_sustain")]
-    pub sustain: f32,
-    /// Amplitude envelope — release time in seconds.
-    #[serde(default = "default_release")]
-    pub release: f32,
+    /// Envelope spec
+    pub envelope: ADSRSpec,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MultiSourceSpec {
+    /// The sources within this multi-source
+    pub sources: Vec<SourceSpec>,
+    /// The base frequency of the source
+    pub base_frequency: f32,
+    /// The mix mode of the sources
+    pub mix_mode: rustic::core::generator::prelude::MixMode,
+    /// The global amplitude envelope (over all sub-sources)
+    pub glob_ampl: ADSRSpec,
 }
 
 /// Describes one filter in the processing chain.
