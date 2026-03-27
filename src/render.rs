@@ -32,12 +32,18 @@ fn check_filter_index<T>(idx: usize, node_map: &Vec<T>) -> Result<(), String> {
 /// `(spec.duration * spec.sample_rate).ceil()` entries.
 pub fn render_graph(spec: &GraphSpec) -> Result<Vec<[f32; 2]>, String> {
     let mut system = System::new().with_block_size(spec.block_size);
+    let mut source_indices: Vec<usize> = vec![];
 
-    let src_idx = system.add_source(build_source(&spec.source, spec.sample_rate));
+    for source in spec.sources.iter() {
+        source_indices.push(system.add_source(build_source(&source, spec.sample_rate)));
+    }
+
     let sink_idx = system.add_sink(Box::new(SimpleSink::new()));
 
     if spec.filters.is_empty() {
-        system.connect_source_to_sink(src_idx, sink_idx);
+        for source_index in source_indices.iter() {
+            system.connect_source_to_sink(*source_index, sink_idx);
+        }
     } else {
         let nodes = spec
             .filters
@@ -70,11 +76,6 @@ pub fn render_graph(spec: &GraphSpec) -> Result<Vec<[f32; 2]>, String> {
                 }
             }
         }
-        system.connect_source(src_idx, nodes[0], 0);
-        for i in 1..nodes.len() {
-            system.connect(nodes[i - 1], nodes[i], 0, 0);
-        }
-        system.connect_sink(*nodes.last().unwrap(), sink_idx, 0);
     }
 
     system
@@ -91,10 +92,14 @@ pub fn render_graph(spec: &GraphSpec) -> Result<Vec<[f32; 2]>, String> {
 
     for i in 0..total_blocks {
         if i == note_on_block {
-            system.start_note(src_idx, note, 1.0);
+            for source in source_indices.iter() {
+                system.start_note(*source, note, 1.0);
+            }
         }
         if i == note_off_block {
-            system.stop_note(src_idx, note);
+            for source in source_indices.iter() {
+                system.stop_note(*source, note);
+            }
         }
         system.run();
         if let Ok(sink) = system.get_sink(sink_idx) {

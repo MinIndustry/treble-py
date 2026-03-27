@@ -56,7 +56,7 @@ pub struct GraphSpec {
     #[serde(default = "default_block_size")]
     pub block_size: usize,
     /// A Single mutli-source, with each sub-source having its own parameters
-    pub source: MultiSourceSpec,
+    pub sources: Vec<MultiSourceSpec>,
     /// Zero or more filters to be added to the graph
     #[serde(default)]
     pub filters: Vec<FilterSpec>,
