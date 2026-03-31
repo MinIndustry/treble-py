@@ -408,7 +408,7 @@ class GraphSpec:
           4. Connections: sorted by type (SourceSink < SourceFilter < FilterFilter <
              FilterSink), then exit index, then entry index.
         """
-        # ── 1. Sort sources within each MultiSourceSpec ───────────────────────
+        # 1. Sort sources within each MultiSourceSpec
         def _source_key(s: SourceSpec) -> tuple:
             return (s.waveform, -s.envelope.sustain)
 
@@ -421,7 +421,7 @@ class GraphSpec:
                 glob_ampl=ms.glob_ampl,
             ))
 
-        # ── 2. Sort MultiSourceSpec blocks ────────────────────────────────────
+        # 2. Sort MultiSourceSpec blocks
         def _ms_key(ms: MultiSourceSpec) -> tuple:
             wf_counts: dict[str, int] = {}
             for s in ms.sources:
@@ -431,7 +431,7 @@ class GraphSpec:
 
         canonical_multis = sorted(canonical_multis, key=_ms_key)
 
-        # ── 3. Topological sort of filters (Kahn's algorithm) ─────────────────
+        # 3. Topological sort of filters (Kahn's algorithm)
         n = len(self.filters)
         if n == 0:
             canonical_filters = []
@@ -467,7 +467,7 @@ class GraphSpec:
             old_to_new = {old: new for new, old in enumerate(topo)}
             canonical_filters = [self.filters[old] for old in topo]
 
-        # ── 4. Renumber and sort connections ──────────────────────────────────
+        # 4. Renumber and sort connections
         if old_to_new:
             canonical_connections = _renumber_connections(self.connections, old_to_new)
         else:
