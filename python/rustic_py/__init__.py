@@ -16,8 +16,10 @@ spec = rustic_py.GraphSpec(
     note_on=0.0,
     note_off=0.5,
     duration=0.7,
-    source=rustic_py.SourceSpec(waveform="sine", attack=0.01, decay=0.1,
-                                sustain=0.8, release=0.2),
+    source=rustic_py.MultiSourceSpec(
+        sources=[rustic_py.SourceSpec(waveform="sine")],
+        base_frequency=440.0,
+    ),
     filters=[rustic_py.lowpass(cutoff_frequency=2000.0)],
 )
 
@@ -34,7 +36,9 @@ sf.write("out.wav", audio, samplerate=44100)
 | Symbol | Description |
 |---|---|
 | `GraphSpec` | Top-level render spec (note, timing, source, filter chain) |
-| `SourceSpec` | Waveform generator + ADSR envelope |
+| `MultiSourceSpec` | Combines multiple `SourceSpec` voices with a shared envelope |
+| `SourceSpec` | Single waveform generator with its own ADSR envelope |
+| `ADSRSpec` | Bezier-curve ADSR envelope (attack/decay/release are 4-tuples) |
 | `available_filters()` | List metadata for every registered filter |
 | `available_sources()` | List metadata for every registered waveform source |
 | `render(spec_dict)` | Low-level render from a plain `dict` |
@@ -43,7 +47,7 @@ Filter classes (e.g. `lowpass`, `highpass`, `compressor`, …) are generated at 
 time from `available_filters()` and injected into this namespace.  Each one is a
 dataclass whose fields map directly to the filter's parameters.
 """
-from ._classes import SourceSpec, GraphSpec, filter_classes
+from ._classes import ADSRSpec, SourceSpec, MultiSourceSpec, GraphSpec, filter_classes
 import sys as _sys
 
 # Re-export filters
