@@ -15,7 +15,7 @@ fn check_source_index(idx: usize, system: &System) -> Result<(), String> {
     }
 }
 
-fn check_filter_index<T>(idx: usize, node_map: &Vec<T>) -> Result<(), String> {
+fn check_filter_index<T>(idx: usize, node_map: &[T]) -> Result<(), String> {
     if node_map.len() <= idx {
         Err(format!(
             "Filter index `{idx}` does not correspond to any filter (system contains {} filter(s))",
@@ -35,7 +35,7 @@ pub fn render_graph(spec: &GraphSpec) -> Result<Vec<[f32; 2]>, String> {
     let mut source_indices: Vec<usize> = vec![];
 
     for source in spec.sources.iter() {
-        source_indices.push(system.add_source(build_source(&source, spec.sample_rate)));
+        source_indices.push(system.add_source(build_source(source, spec.sample_rate)));
     }
 
     let sink_idx = system.add_sink(Box::new(SimpleSink::new()));

@@ -66,7 +66,7 @@ pub fn build_source(spec: &MultiSourceSpec, sample_rate: f32) -> Box<dyn Source>
         .build();
 
     let mut builder = MultiToneGeneratorBuilder::new();
-    for source in spec.sources.iter().map(|s| build_single_source(s)) {
+    for source in spec.sources.iter().map(build_single_source) {
         builder = builder.add_generator(source)
     }
 
