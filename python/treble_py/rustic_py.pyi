@@ -13,10 +13,10 @@ def render(spec_dict: dict[str, Any]) -> np.ndarray[tuple[int, int], np.dtype[np
     Example:
 
     ```python
-    import rustic_py
+    import treble_py
     import soundfile as sf
 
-    audio = rustic_py.render({
+    audio = treble_py.render({
         "note": 60, "note_on": 0.0, "note_off": 0.5, "duration": 0.7,
         "source": {"waveform": "sine", "attack": 0.01, "decay": 0.1,
                    "sustain": 0.8, "release": 0.2},
@@ -37,9 +37,9 @@ def available_filters() -> list[dict[str, Any]]:
     Example:
 
     ```python
-    import rustic_py
+    import treble_py
 
-    for f in rustic_py.available_filters():
+    for f in treble_py.available_filters():
         print(f["name"], "-", f["description"])
     # lowpass - A simple lowpass filter
     # highpass - A simple highpass filter
@@ -57,9 +57,9 @@ def available_sources() -> list[dict[str, Any]]:
     Example:
 
     ```python
-    import rustic_py
+    import treble_py
 
-    for s in rustic_py.available_sources():
+    for s in treble_py.available_sources():
         params = [p["name"] for p in s["parameters"]]
         print(f'{s["name"]}: {", ".join(params)}')
     # sine: attack, decay, sustain, release

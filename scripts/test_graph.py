@@ -1,10 +1,10 @@
 from typing import Callable
-from rustic_py import SourceSpec, GraphSpec, MultiSourceSpec, ADSRSpec
-from rustic_py import ResonantBandpassFilter, LowPassFilter
-import rustic_py
-from rustic_py.rustic_py import render
+from treble_py import SourceSpec, GraphSpec, MultiSourceSpec, ADSRSpec
+from treble_py import ResonantBandpassFilter, LowPassFilter
+import treble_py
+from treble_py.treble_py import render
 
-all_filters = rustic_py.rustic_py.available_filters()
+all_filters = treble_py.treble_py.available_filters()
 
 def find_longest(key, filters, base=0) -> int:
     longest: int = base

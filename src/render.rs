@@ -1,5 +1,5 @@
-use rustic::Note;
-use rustic::core::graph::{SimpleSink, System};
+use treble::Note;
+use treble::core::graph::{SimpleSink, System};
 
 use crate::registry::{build_filter, build_source};
 use crate::spec::GraphSpec;

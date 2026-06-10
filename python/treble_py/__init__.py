@@ -1,26 +1,26 @@
 """
-rustic-py — Python bindings for the Rustic audio synthesis engine.
+treble-py — Python bindings for the Treble audio synthesis engine.
 
-Rustic models audio synthesis as a directed graph: a **source** generates a waveform
+Treble models audio synthesis as a directed graph: a **source** generates a waveform
 and a chain of **filters** transforms it.  The Python API exposes this through a small
 set of dataclasses and two discovery functions.
 
 ## Quick start
 
 ```python
-import rustic_py
+import treble_py
 
 # 1. Describe the sound
-spec = rustic_py.GraphSpec(
+spec = treble_py.GraphSpec(
     note=60,          # MIDI note (middle C)
     note_on=0.0,
     note_off=0.5,
     duration=0.7,
-    source=rustic_py.MultiSourceSpec(
-        sources=[rustic_py.SourceSpec(waveform="sine")],
+    source=treble_py.MultiSourceSpec(
+        sources=[treble_py.SourceSpec(waveform="sine")],
         base_frequency=440.0,
     ),
-    filters=[rustic_py.lowpass(cutoff_frequency=2000.0)],
+    filters=[treble_py.lowpass(cutoff_frequency=2000.0)],
 )
 
 # 2. Render to a (N, 2) float32 numpy array

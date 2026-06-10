@@ -1,6 +1,6 @@
-use rustic::core::filters::prelude::*;
-use rustic::core::graph::Filter;
-use rustic_meta::MetaFilter;
+use treble::core::filters::prelude::*;
+use treble::core::graph::Filter;
+use treble_meta::MetaFilter;
 
 use super::helpers::{get_f32, get_usize};
 use crate::spec::FilterSpec;

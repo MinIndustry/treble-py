@@ -1,4 +1,4 @@
-site_name: rustic-py
+site_name: treble-py
 docs_dir: docs
 theme:
   name: material

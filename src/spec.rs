@@ -101,7 +101,7 @@ pub struct MultiSourceSpec {
     /// The base frequency of the source
     pub base_frequency: f32,
     /// The mix mode of the sources
-    pub mix_mode: rustic::core::generator::prelude::MixMode,
+    pub mix_mode: treble::core::generator::prelude::MixMode,
     /// The global amplitude envelope (over all sub-sources)
     pub glob_ampl: ADSRSpec,
 }

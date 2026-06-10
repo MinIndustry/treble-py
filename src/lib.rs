@@ -21,10 +21,10 @@ use spec::GraphSpec;
 /// Example::
 ///
 /// ```py
-/// import rustic_py
+/// import treble_py
 /// import soundfile as sf
 ///
-/// audio = rustic_py.render({
+/// audio = treble_py.render({
 ///     "note": 60, "note_on": 0.0, "note_off": 0.5, "duration": 0.7,
 ///     "source": {"waveform": "sine", "attack": 0.01, "decay": 0.1,
 ///                "sustain": 0.8, "release": 0.2},
@@ -62,9 +62,9 @@ fn render<'py>(
 /// Example::
 ///
 /// ```py
-/// import rustic_py
+/// import treble_py
 ///
-/// for f in rustic_py.available_filters():
+/// for f in treble_py.available_filters():
 ///     print(f["name"], "-", f["description"])
 /// # lowpass - A simple lowpass filter
 /// # highpass - A simple highpass filter
@@ -72,7 +72,7 @@ fn render<'py>(
 /// ```
 #[pyfunction]
 fn available_filters(py: Python<'_>) -> PyResult<Py<PyAny>> {
-    let filters = rustic::meta::get_filters();
+    let filters = treble::meta::get_filters();
     let json_str =
         serde_json::to_string(&filters).map_err(|e| PyValueError::new_err(e.to_string()))?;
 
@@ -89,9 +89,9 @@ fn available_filters(py: Python<'_>) -> PyResult<Py<PyAny>> {
 /// Example::
 ///
 /// ```py
-/// import rustic_py
+/// import treble_py
 ///
-/// for s in rustic_py.available_sources():
+/// for s in treble_py.available_sources():
 ///     params = [p["name"] for p in s["parameters"]]
 ///     print(f'{s["name"]}: {", ".join(params)}')
 /// # sine: attack, decay, sustain, release
@@ -100,7 +100,7 @@ fn available_filters(py: Python<'_>) -> PyResult<Py<PyAny>> {
 /// ```
 #[pyfunction]
 fn available_sources(py: Python<'_>) -> PyResult<Py<PyAny>> {
-    let generators = rustic::meta::get_generators();
+    let generators = treble::meta::get_generators();
     let json_str =
         serde_json::to_string(&generators).map_err(|e| PyValueError::new_err(e.to_string()))?;
 
@@ -110,7 +110,7 @@ fn available_sources(py: Python<'_>) -> PyResult<Py<PyAny>> {
 }
 
 #[pymodule]
-fn rustic_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn treble_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(render, m)?)?;
     m.add_function(wrap_pyfunction!(available_filters, m)?)?;
     m.add_function(wrap_pyfunction!(available_sources, m)?)?;

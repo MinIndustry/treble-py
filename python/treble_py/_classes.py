@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 import random
-from .rustic_py import available_filters, available_sources
+from .treble_py import available_filters, available_sources
 
 # Helpers
 def _field_spec(params: dict[str, dict]) -> tuple[str, type, Any]:
@@ -390,7 +390,7 @@ class GraphSpec:
         }
 
     def render(self) -> np.ndarray:
-        from .rustic_py import render as _render
+        from .treble_py import render as _render
         return _render(self.to_spec())
 
     def canonical(self) -> GraphSpec:

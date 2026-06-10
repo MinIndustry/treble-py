@@ -1,10 +1,10 @@
-use rustic::core::envelope::prelude::{ADSREnvelopeBuilder, BezierSegment, ConstantSegment};
-use rustic::core::generator::prelude::SingleToneGenerator;
-use rustic::core::generator::prelude::{
+use treble::core::envelope::prelude::{ADSREnvelopeBuilder, BezierSegment, ConstantSegment};
+use treble::core::generator::prelude::SingleToneGenerator;
+use treble::core::generator::prelude::{
     Waveform,
     builder::{MultiToneGeneratorBuilder, ToneGeneratorBuilder},
 };
-use rustic::core::graph::{MonophonicAllocationStrategy, MonophonicSource, Source};
+use treble::core::graph::{MonophonicAllocationStrategy, MonophonicSource, Source};
 
 use super::frequency::build_frequency_relation;
 use crate::spec::{MultiSourceSpec, SourceSpec};

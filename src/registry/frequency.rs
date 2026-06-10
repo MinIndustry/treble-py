@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use rustic::core::generator::prelude::FrequencyRelation;
+use treble::core::generator::prelude::FrequencyRelation;
 
 use crate::spec::FrequencyRelationSpec;
 

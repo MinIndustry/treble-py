@@ -1,3 +1,3 @@
 # API Reference
 
-::: rustic_py
+::: treble_py
