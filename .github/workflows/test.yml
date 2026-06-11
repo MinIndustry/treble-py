@@ -1,0 +1,39 @@
+name: Tests
+
+# Required gate for merging into main: fmt + clippy (full type-check, no link).
+#
+# `cargo test` is intentionally absent: pyo3's `extension-module` feature makes
+# test binaries fail to link against libpython (and the crate has no Rust
+# tests). If Rust tests are added later, gate `extension-module` behind a
+# feature that only maturin enables (the standard pyo3 pattern), then add
+# `cargo test` here.
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: test-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system build deps (cpal → ALSA)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
