@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 numpy = "0.28.0"
 pyo3 = { version = "0.28.2", features = ["extension-module", "abi3-py39"] }
-treble = { version = "0.2.0", path = "../treble-core", default-features = false }
-treble-meta = { version = "0.1.0", path = "../treble-meta" }
+treble = { git = "https://github.com/MinIndustry/treble-core.git", tag = "0.2.0", default-features = false }
+treble-meta = { git = "https://github.com/MinIndustry/treble-meta.git", tag = "0.1.0" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"

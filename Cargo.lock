@@ -1412,6 +1412,7 @@ checksum = "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
 [[package]]
 name = "treble"
 version = "0.2.0"
+source = "git+https://github.com/MinIndustry/treble-core.git?tag=0.2.0#b7373bd82a66128010cbb3327930a5c7e5121846"
 dependencies = [
  "atomic_float",
  "chrono",
@@ -1430,35 +1431,26 @@ dependencies = [
  "thiserror 2.0.18",
  "toml",
  "treble-derive",
- "treble-meta 0.1.0 (git+https://github.com/MinIndustry/treble-meta.git)",
+ "treble-meta",
  "typetag",
 ]
 
 [[package]]
 name = "treble-derive"
-version = "0.1.0"
-source = "git+https://github.com/MinIndustry/treble-derive.git#084e307c98ed733452b3c5b3ba9be3e241aeb6ab"
+version = "0.1.1"
+source = "git+https://github.com/MinIndustry/treble-derive.git?tag=0.1.1#9046b2a39f784aa01cd2afdb173a5676b984ff3a"
 dependencies = [
  "convert_case",
  "proc-macro2",
  "quote",
  "syn",
- "treble-meta 0.1.0 (git+https://github.com/MinIndustry/treble-meta.git)",
+ "treble-meta",
 ]
 
 [[package]]
 name = "treble-meta"
 version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "serde",
-]
-
-[[package]]
-name = "treble-meta"
-version = "0.1.0"
-source = "git+https://github.com/MinIndustry/treble-meta.git#2fb9a3c842b82ff3fa5b90f5fb87c472df02c8e0"
+source = "git+https://github.com/MinIndustry/treble-meta.git?tag=0.1.0#2fb9a3c842b82ff3fa5b90f5fb87c472df02c8e0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1474,7 +1466,7 @@ dependencies = [
  "serde",
  "serde_json",
  "treble",
- "treble-meta 0.1.0",
+ "treble-meta",
 ]
 
 [[package]]
