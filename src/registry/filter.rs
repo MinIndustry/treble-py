@@ -1,51 +1,72 @@
-use treble::core::filters::prelude::*;
 use treble::core::graph::Filter;
-use treble_meta::MetaFilter;
+use treble_meta::Parameter;
 
-use super::helpers::{get_f32, get_usize};
 use crate::spec::FilterSpec;
 
 pub fn build_filter(spec: &FilterSpec, sample_rate: f32) -> Result<Box<dyn Filter>, String> {
-    let p = &spec.params;
-    let filter: Box<dyn Filter> = match spec.filter_type.as_str() {
-        "LowPassFilter" => Box::new(LowPassFilter::new(
-            get_f32(p, "cutoff_frequency", 1000.0),
-            sample_rate,
-        )),
-        "HighPassFilter" => Box::new(HighPassFilter::new(
-            get_f32(p, "cutoff_frequency", 1000.0),
-            sample_rate,
-        )),
-        "BandPass" => Box::new(BandPass::new(
-            get_f32(p, "low", 200.0),
-            get_f32(p, "high", 4000.0),
-            sample_rate,
-        )),
-        "ResonantBandpassFilter" => Box::new(ResonantBandpassFilter::new(
-            get_f32(p, "center", 1000.0),
-            get_f32(p, "quality", 1.0),
-            sample_rate,
-        )),
-        "MovingAverage" => Box::new(MovingAverage::new(get_usize(p, "size", 5))),
-        "GainFilter" => Box::new(GainFilter::new(get_f32(p, "factor", 1.0))),
-        "Clipper" => Box::new(Clipper::new(get_f32(p, "max_ampl", 0.8))),
-        "Compressor" => {
-            let mut c = Compressor::default();
-            for (k, v) in p {
-                if let Some(f) = v.as_f64() {
-                    c.set_parameter(k.as_str(), f as f32);
-                }
-            }
-            Box::new(c)
-        }
-        "Tremolo" => Box::new(Tremolo::new(
-            get_f32(p, "frequency", 5.0),
-            get_f32(p, "depth", 0.5),
-            sample_rate,
-        )),
-        "DelayFilter" => Box::new(DelayFilter::new(sample_rate, get_f32(p, "delay_for", 0.5))),
-        "PanFilter" => Box::new(PanFilter::new(get_f32(p, "direction", 0.0))),
-        other => return Err(format!("Unknown filter type: '{other}'")),
+    let registration = inventory::iter::<treble::meta::FilterRegistration>()
+        .find(|entry| (entry.info)().type_id == spec.filter_type)
+        .ok_or_else(|| format!("Unknown filter type: '{}'", spec.filter_type))?;
+    let info = (registration.info)();
+
+    let parameter_name = |parameter: &Parameter<&'static str>| match parameter {
+        Parameter::Toggle { field_name, .. }
+        | Parameter::Range { field_name, .. }
+        | Parameter::Float { field_name, .. }
+        | Parameter::Int { field_name, .. }
+        | Parameter::List { field_name, .. } => *field_name,
     };
+    let known_parameters: Vec<&str> = info
+        .inputs
+        .iter()
+        .filter_map(|input| input.parameter.as_ref())
+        .map(parameter_name)
+        .collect();
+
+    for (name, value) in &spec.params {
+        if !known_parameters.contains(&name.as_str()) {
+            return Err(format!(
+                "Unknown parameter '{name}' for filter '{}'",
+                spec.filter_type
+            ));
+        }
+        if !value.is_number() {
+            return Err(format!(
+                "Parameter '{name}' for filter '{}' must be numeric",
+                spec.filter_type
+            ));
+        }
+    }
+
+    let mut filter = (registration.create)();
+    filter.set_parameter("sample_rate", sample_rate);
+    for (name, value) in &spec.params {
+        filter.set_parameter(name, value.as_f64().unwrap() as f32);
+    }
     Ok(filter)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use super::*;
+
+    #[test]
+    fn inventory_builds_registered_filter() {
+        let spec = FilterSpec {
+            filter_type: "GainFilter".into(),
+            params: HashMap::from([("factor".into(), serde_json::json!(0.5))]),
+        };
+        assert!(build_filter(&spec, 44_100.0).is_ok());
+    }
+
+    #[test]
+    fn unknown_parameter_is_rejected() {
+        let spec = FilterSpec {
+            filter_type: "GainFilter".into(),
+            params: HashMap::from([("facotr".into(), serde_json::json!(0.5))]),
+        };
+        assert!(build_filter(&spec, 44_100.0).is_err());
+    }
 }

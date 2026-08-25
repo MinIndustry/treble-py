@@ -393,6 +393,16 @@ class GraphSpec:
         from .treble_py import render as _render
         return _render(self.to_spec())
 
+    @staticmethod
+    def render_batch(specs: list[GraphSpec]) -> list[np.ndarray]:
+        """Render many GraphSpecs in parallel (GIL released, rayon thread pool).
+
+        Order is preserved. Substantially faster than a Python-side loop when
+        generating datasets.
+        """
+        from .treble_py import render_batch as _render_batch
+        return _render_batch([spec.to_spec() for spec in specs])
+
     def canonical(self) -> GraphSpec:
         """Return a copy of this GraphSpec in canonical form.
 

@@ -1,0 +1,74 @@
+name: Release
+
+# Build abi3 wheels + sdist with maturin and attach them to a GitHub Release
+# whenever a version tag is pushed:
+#
+#   git tag 0.3.0 && git push origin 0.3.0
+#
+# Consumers with a Rust toolchain can instead depend on the tag directly:
+#   [tool.uv.sources]
+#   treble-py = { git = "https://github.com/MinIndustry/treble-py", tag = "0.3.0" }
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  wheels:
+    name: wheel ${{ matrix.platform.name }}
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - { name: linux-x86_64,  runner: ubuntu-latest,   target: x86_64 }
+          - { name: linux-aarch64, runner: ubuntu-24.04-arm, target: aarch64 }
+          - { name: macos-arm64,   runner: macos-latest,     target: aarch64 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist
+          manylinux: auto
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.platform.name }}
+          path: dist/*.whl
+
+  sdist:
+    name: sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  release:
+    name: GitHub release
+    needs: [wheels, sdist]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

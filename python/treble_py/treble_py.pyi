@@ -18,13 +18,30 @@ def render(spec_dict: dict[str, Any]) -> np.ndarray[tuple[int, int], np.dtype[np
 
     audio = treble_py.render({
         "note": 60, "note_on": 0.0, "note_off": 0.5, "duration": 0.7,
-        "source": {"waveform": "sine", "attack": 0.01, "decay": 0.1,
-                   "sustain": 0.8, "release": 0.2},
-        "filters": [{"type": "lowpass", "params": {"cutoff_frequency": 2000.0}}],
+        "sources": [{"sources": [{"waveform": "sine"}], "base_frequency": 440.0}],
+        "filters": [{"type": "LowPassFilter", "params": {"cutoff_frequency": 2000.0}}],
+        "connections": [{"SourceFilter": {"source": 0, "filter": 0}},
+                        {"FilterSink": {"filter": 0, "sink": 0}}],
     })
     # audio.shape == (N, 2), dtype float32
     sf.write("out.wav", audio, samplerate=44100)
     ```
+    """
+    ...
+
+def render_batch(
+    spec_dicts: list[dict[str, Any]],
+) -> list[np.ndarray[tuple[int, int], np.dtype[np.float32]]]:
+    """Render many synthesis graph specs in parallel.
+
+    The GIL is released and specs are rendered across a rayon thread pool.
+    Order is preserved.
+
+    Args:
+        spec_dicts: list of GraphSpec dicts (same format as ``render``).
+
+    Returns:
+        list of numpy.ndarray, each of shape (N_samples, 2), dtype float32.
     """
     ...
 

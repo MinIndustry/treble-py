@@ -42,12 +42,14 @@ sf.write("out.wav", audio, samplerate=44100)
 | `available_filters()` | List metadata for every registered filter |
 | `available_sources()` | List metadata for every registered waveform source |
 | `render(spec_dict)` | Low-level render from a plain `dict` |
+| `render_batch(spec_dicts)` | Parallel render of many `dict` specs (GIL released) |
 
 Filter classes (e.g. `lowpass`, `highpass`, `compressor`, …) are generated at import
 time from `available_filters()` and injected into this namespace.  Each one is a
 dataclass whose fields map directly to the filter's parameters.
 """
 from ._classes import ADSRSpec, SourceSpec, MultiSourceSpec, GraphSpec, filter_classes
+from .treble_py import render, render_batch, available_filters, available_sources
 import sys as _sys
 
 # Re-export filters

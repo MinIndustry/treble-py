@@ -1,12 +1,9 @@
 name: Tests
 
-# Required gate for merging into main: fmt + clippy (full type-check, no link).
+# Required gate for merging into main: fmt + clippy + cargo test.
 #
-# `cargo test` is intentionally absent: pyo3's `extension-module` feature makes
-# test binaries fail to link against libpython (and the crate has no Rust
-# tests). If Rust tests are added later, gate `extension-module` behind a
-# feature that only maturin enables (the standard pyo3 pattern), then add
-# `cargo test` here.
+# `extension-module` is gated behind a cargo feature that only maturin enables
+# (see Cargo.toml / pyproject.toml), so test binaries link against libpython.
 
 on:
   pull_request:
@@ -37,3 +34,6 @@ jobs:
 
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test
