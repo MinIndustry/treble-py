@@ -95,12 +95,8 @@ fn render_batch<'py>(
         })
         .collect::<PyResult<_>>()?;
 
-    let rendered: Vec<Result<Vec<[f32; 2]>, String>> = py.detach(|| {
-        specs
-            .par_iter()
-            .map(renderer::render_graph)
-            .collect()
-    });
+    let rendered: Vec<Result<Vec<[f32; 2]>, String>> =
+        py.detach(|| specs.par_iter().map(renderer::render_graph).collect());
 
     rendered
         .into_iter()
@@ -132,8 +128,8 @@ fn render_batch<'py>(
 #[pyfunction]
 fn available_filters(py: Python<'_>) -> PyResult<Py<PyAny>> {
     let filters = treble::meta::get_filters();
-    let obj = pythonize::pythonize(py, &filters)
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let obj =
+        pythonize::pythonize(py, &filters).map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(obj.unbind())
 }
 
@@ -157,8 +153,8 @@ fn available_filters(py: Python<'_>) -> PyResult<Py<PyAny>> {
 #[pyfunction]
 fn available_sources(py: Python<'_>) -> PyResult<Py<PyAny>> {
     let generators = treble::meta::get_generators();
-    let obj = pythonize::pythonize(py, &generators)
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let obj =
+        pythonize::pythonize(py, &generators).map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(obj.unbind())
 }
 
