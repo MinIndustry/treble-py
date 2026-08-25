@@ -31,11 +31,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # treble-core 0.3.0 links cpal/ALSA unconditionally, so linux builds
+      # need alsa headers in the container, and the wheels cannot be manylinux
+      # (libasound is not in the whitelist) — they get the plain linux_* tag,
+      # which pip/uv accept from direct URLs. If cpal ever moves behind a
+      # feature in treble-core, drop before-script-linux and the
+      # compatibility flag to get true manylinux wheels.
       - uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist
+          args: --release --out dist ${{ startsWith(matrix.platform.name, 'linux') && '--compatibility linux' || '' }}
           manylinux: auto
+          before-script-linux: yum install -y alsa-lib-devel || apt-get update && apt-get install -y libasound2-dev
 
       - uses: actions/upload-artifact@v4
         with:
