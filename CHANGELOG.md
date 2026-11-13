@@ -22,4 +22,20 @@
   `random_frequency_relation()`; it previously always returned `"identity"`.
 - `SourceSpec.frequency_relation` accepts `"identity"`, `"<kind>:<value>"` or a
   single-key dict, and is validated. The renderer now parses `"constant:<hz>"`.
+- `GraphSpec.random()` now draws realistic patches from sound-design archetypes
+  (`ARCHETYPES`: bass, lead, pad, keys, bell, percussive), each with priors over
+  note range, voices and frequency relations, amplitude envelope and effect
+  chain. Envelopes complete inside the held note, cutoffs follow the note's
+  pitch, chains follow signal flow, time effects can run as parallel sends, and
+  the duration covers every release and effect tail. New keyword arguments
+  `archetype=` and `rng=`. The previous sampler is `GraphSpec.random_uniform()`.
+- `ADSRSpec.random(note_len=, tail=, rng=)` draws an envelope inside a note
+  budget; without arguments it behaves as before.
+- Fix: the renderer summed nothing at the sink. With several sources or
+  terminal filters wired to it, their blocks were appended one after another
+  in time and then truncated, instead of mixed. A summing sink replaces
+  `SimpleSink`. This affected most `random_uniform()` patches at complexity
+  0.5 and above.
+- Fix: `GraphSpec.canonical()` reordered source blocks without renumbering the
+  source indices in connections, silently rewiring multi-block patches.
 - Add a pytest suite (`tests/`) and a CI job that builds the extension and runs it.

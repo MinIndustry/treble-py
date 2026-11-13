@@ -41,6 +41,7 @@ sf.write("out.wav", audio, samplerate=44100)
 | `MultiSourceSpec` | Combines multiple `SourceSpec` voices with a shared envelope |
 | `SourceSpec` | Single waveform generator with its own ADSR envelope |
 | `ADSRSpec` | Bezier-curve ADSR envelope (attack/decay/release are 4-tuples) |
+| `ARCHETYPES` | Patch archetypes sampled by `GraphSpec.random()` |
 | `available_filters()` | List metadata for every registered filter |
 | `available_sources()` | List metadata for every registered waveform source |
 | `render(spec_dict)` | Low-level render from a plain `dict` |
@@ -51,6 +52,7 @@ at import time from `available_filters()` and injected into this namespace.  Eac
 is a dataclass whose fields map directly to the filter's user parameters; engine-owned
 parameters such as `sample_rate` are set by the renderer and are not fields.
 """
+from ._archetypes import ARCHETYPE_WEIGHTS, ARCHETYPES
 from ._classes import (
     ADSRSpec,
     GraphSpec,
