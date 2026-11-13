@@ -5,8 +5,40 @@ from dataclasses import dataclass, field, make_dataclass
 from typing import TYPE_CHECKING, Any
 import numpy as np
 
+import math
 import random
 from .treble_py import available_filters, available_sources
+
+
+def _user_inputs(inputs: list[dict]) -> list[dict]:
+    """Parameter inputs a user may set. Engine-owned parameters (`access ==
+    "engine"`, e.g. `sample_rate`) are injected by the renderer and never
+    appear on the generated classes."""
+    return [
+        inp for inp in inputs
+        if inp.get("parameter") is not None and inp.get("access", "user") != "engine"
+    ]
+
+
+#: Sampling priors that override the metadata-derived default for parameters
+#: whose declared range is sized for an editor rather than for random patches.
+#: `GainFilter.factor` declares -16..16 (phase inversion included); random
+#: patches keep a gentle lognormal around unity gain instead.
+_RANDOM_PRIORS: dict[tuple[str, str], Callable[[], float]] = {
+    ("GainFilter", "factor"): lambda: float(np.random.lognormal(mean=0.0, sigma=0.3)),
+}
+
+
+def _sample_around_default(default: float, vmin: float, vmax: float, scale: str | None) -> float:
+    """Normal draw around `default` spanning the range at +/-3 sigma, taken in
+    log space for logarithmic parameters, clipped to [vmin, vmax]."""
+    if scale == "logarithmic" and vmin > 0:
+        lo, hi = math.log(vmin), math.log(vmax)
+        mu = math.log(min(max(default, vmin), vmax))
+        val = math.exp(np.random.normal(loc=mu, scale=(hi - lo) / 6.0))
+    else:
+        val = np.random.normal(loc=default, scale=(vmax - vmin) / 6.0)
+    return float(np.clip(val, vmin, vmax))
 
 # Helpers
 def _field_spec(params: dict[str, dict]) -> tuple[str, type, Any]:
@@ -30,11 +62,8 @@ def _field_spec(params: dict[str, dict]) -> tuple[str, type, Any]:
 def _build_validator(inputs: list[dict]) -> Callable[..., None] | None:
     """Returns a __post_init__ to validate ranges/int bounds"""
     checks = []
-    for inp in inputs:
-        p = inp.get("parameter")
-        if p is None:
-            continue
-        (kind, data), = p.items()
+    for inp in _user_inputs(inputs):
+        (kind, data), = inp["parameter"].items()
         if kind == "Range":
             checks.append((data["field_name"], float(data["min"]), float(data["max"])))
         elif kind == "Int":
@@ -65,14 +94,12 @@ def _make_filter_class(info: dict[str, Any]) -> type:
     fields = []
     param_names = []
     param_specs = []
-    for inp in inputs:
-        if inp.get("parameter") is None:
-            continue
+    for inp in _user_inputs(inputs):
         f = _field_spec(inp["parameter"])
         fields.append(f)
         param_names.append(f[0])
         (kind, data), = inp["parameter"].items()
-        param_specs.append((kind, data))
+        param_specs.append((kind, data, inp.get("scale")))
 
     validator = _build_validator(inputs)
 
@@ -85,19 +112,22 @@ def _make_filter_class(info: dict[str, Any]) -> type:
 
     cls = make_dataclass(type_id, fields, namespace=namespace)
 
-    def _random(cls=cls, specs=param_specs):
+    def _random(cls=cls, specs=param_specs, _tid=type_id):
         kwargs = {}
-        for kind, data in specs:
+        for kind, data, scale in specs:
             name = data["field_name"]
-            if kind == "Toggle":
+            prior = _RANDOM_PRIORS.get((_tid, name))
+            if prior is not None:
+                val = prior()
+                if kind == "Range":
+                    val = float(np.clip(val, float(data["min"]), float(data["max"])))
+                kwargs[name] = val
+            elif kind == "Toggle":
                 kwargs[name] = random.choice([True, False])
             elif kind == "Range":
-                default = float(data["default"])
-                vmin = float(data["min"])
-                vmax = float(data["max"])
-                sigma = (vmax - vmin) / 6.0
-                val = np.random.normal(loc=default, scale=sigma)
-                kwargs[name] = float(np.clip(val, vmin, vmax))
+                kwargs[name] = _sample_around_default(
+                    float(data["default"]), float(data["min"]), float(data["max"]), scale
+                )
             elif kind == "Float":
                 default = float(data["default"])
                 mu = np.log(default) if default > 0.0 else 0.0
@@ -106,7 +136,10 @@ def _make_filter_class(info: dict[str, Any]) -> type:
                 default = int(data["default"])
                 vmin = data.get("min")
                 vmax = data.get("max")
-                if vmin is not None and vmax is not None:
+                if vmin is not None and vmax is not None and scale == "logarithmic":
+                    val = _sample_around_default(float(default), float(vmin), float(vmax), scale)
+                    kwargs[name] = int(np.clip(round(val), int(vmin), int(vmax)))
+                elif vmin is not None and vmax is not None:
                     sigma = (float(vmax) - float(vmin)) / 6.0
                     val = int(round(np.random.normal(loc=default, scale=sigma)))
                     kwargs[name] = int(np.clip(val, int(vmin), int(vmax)))
@@ -183,27 +216,91 @@ class ADSRSpec:
             release=(release_duration, release_peak, release_c1_time, release_c1_amp)
         )
 
+#: Frequency relation kinds, besides the bare string "identity".
+RELATION_KINDS: tuple[str, ...] = ("ratio", "semitones", "harmonic", "offset", "constant")
+
+#: Relative weight of each relation kind drawn by `SourceSpec.random()`.
+RELATION_WEIGHTS: dict[str, float] = {
+    "identity": 0.45, "ratio": 0.15, "semitones": 0.15,
+    "harmonic": 0.10, "offset": 0.10, "constant": 0.05,
+}
+
+
+def random_frequency_relation() -> str | dict[str, float | int]:
+    """Draw a frequency relation in musically plausible ranges.
+
+    Weights follow `RELATION_WEIGHTS`. A detune is a few cents to a few
+    semitones rather than the full numeric span; harmonics stay in 1..16 and
+    fixed-frequency layers in 40 Hz..4 kHz (log-uniform).
+    """
+    names = list(RELATION_WEIGHTS)
+    name = random.choices(names, weights=[RELATION_WEIGHTS[n] for n in names], k=1)[0]
+    if name == "identity":
+        return "identity"
+    if name == "ratio":
+        return {"ratio": float(math.exp(np.random.normal(0.0, 0.35)))}
+    if name == "semitones":
+        return {"semitones": int(np.random.randint(-24, 25))}
+    if name == "harmonic":
+        return {"harmonic": int(np.random.randint(1, 17))}
+    if name == "offset":
+        return {"offset": float(np.random.normal(0.0, 30.0))}
+    return {"constant": float(math.exp(np.random.uniform(math.log(40.0), math.log(4000.0))))}
+
+
+def _check_relation(rel: Any) -> None:
+    """Validate the renderer's flat wire format: "identity", "<kind>:<value>",
+    or a single-key dict such as {"ratio": 2.0}."""
+    if rel == "identity":
+        return
+    if isinstance(rel, str):
+        kind, sep, value = rel.partition(":")
+        try:
+            ok = bool(sep) and kind in RELATION_KINDS and math.isfinite(float(value))
+        except ValueError:
+            ok = False
+    elif isinstance(rel, dict) and len(rel) == 1:
+        (kind, value), = rel.items()
+        ok = (kind in RELATION_KINDS and isinstance(value, (int, float))
+              and not isinstance(value, bool) and math.isfinite(value))
+    else:
+        ok = False
+    if not ok:
+        raise ValueError(
+            f"frequency_relation must be 'identity', '<kind>:<value>' or a single-key dict "
+            f"with kind in {RELATION_KINDS!r}, got {rel!r}"
+        )
+
+
 @dataclass
 class SourceSpec:
     waveform: str = "sine"
-    frequency_relation: str = "identity"
+    frequency_relation: str | dict[str, float | int] = "identity"
     envelope: ADSRSpec = field(default_factory=ADSRSpec)
 
     def __post_init__(self):
         valid = [s["type_id"] for s in available_sources()]
         if self.waveform not in valid:
             raise ValueError(f"waveform must be one of {valid!r}, got {self.waveform!r}")
+        _check_relation(self.frequency_relation)
 
     def to_spec(self) -> dict[str, Any]:
         return {
             "waveform": self.waveform,
-            "frequency_relation": self.frequency_relation,
+            "frequency_relation": (
+                dict(self.frequency_relation)
+                if isinstance(self.frequency_relation, dict)
+                else self.frequency_relation
+            ),
             "envelope": self.envelope.to_spec(),
         }
 
     @staticmethod
     def random(waveform_weights: dict[str, float] | None = None) -> SourceSpec:
         """Returns a random SourceSpec.
+
+        The frequency relation is drawn by `random_frequency_relation()`, so all
+        six relation kinds occur (identity in ~45% of sources).
 
         Args:
             waveform_weights: mutable dict mapping waveform type_id → weight. Chosen waveforms
@@ -219,7 +316,7 @@ class SourceSpec:
         return SourceSpec(
             waveform=waveform,
             envelope=ADSRSpec.random(),
-            frequency_relation="identity",
+            frequency_relation=random_frequency_relation(),
         )
 
 

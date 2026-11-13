@@ -1,6 +1,7 @@
 name: Tests
 
-# Required gate for merging into main: fmt + clippy + cargo test.
+# Required gate for merging into main: fmt + clippy + cargo test, and the
+# Python layer (generated classes, samplers) against a freshly built extension.
 #
 # `extension-module` is gated behind a cargo feature that only maturin enables
 # (see Cargo.toml / pyproject.toml), so test binaries link against libpython.
@@ -37,3 +38,29 @@ jobs:
 
       - name: Test
         run: cargo test
+
+  python:
+    name: python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system build deps (cpal → ALSA)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      - name: Build extension
+        run: |
+          uv venv
+          uv pip install "maturin>=1.5,<2.0" pytest numpy
+          uv run --no-project maturin develop --release
+
+      - name: Pytest
+        run: uv run --no-project pytest -q tests

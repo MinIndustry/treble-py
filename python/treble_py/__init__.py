@@ -16,11 +16,13 @@ spec = treble_py.GraphSpec(
     note_on=0.0,
     note_off=0.5,
     duration=0.7,
-    source=treble_py.MultiSourceSpec(
+    sources=[treble_py.MultiSourceSpec(
         sources=[treble_py.SourceSpec(waveform="sine")],
         base_frequency=440.0,
-    ),
-    filters=[treble_py.lowpass(cutoff_frequency=2000.0)],
+    )],
+    filters=[treble_py.LowPassFilter(cutoff_frequency=2000.0)],
+    connections=[{"SourceFilter": {"source": 0, "filter": 0}},
+                 {"FilterSink": {"filter": 0, "sink": 0}}],
 )
 
 # 2. Render to a (N, 2) float32 numpy array
@@ -44,11 +46,19 @@ sf.write("out.wav", audio, samplerate=44100)
 | `render(spec_dict)` | Low-level render from a plain `dict` |
 | `render_batch(spec_dicts)` | Parallel render of many `dict` specs (GIL released) |
 
-Filter classes (e.g. `lowpass`, `highpass`, `compressor`, …) are generated at import
-time from `available_filters()` and injected into this namespace.  Each one is a
-dataclass whose fields map directly to the filter's parameters.
+Filter classes (e.g. `LowPassFilter`, `HighPassFilter`, `Compressor`, …) are generated
+at import time from `available_filters()` and injected into this namespace.  Each one
+is a dataclass whose fields map directly to the filter's user parameters; engine-owned
+parameters such as `sample_rate` are set by the renderer and are not fields.
 """
-from ._classes import ADSRSpec, SourceSpec, MultiSourceSpec, GraphSpec, filter_classes
+from ._classes import (
+    ADSRSpec,
+    GraphSpec,
+    MultiSourceSpec,
+    SourceSpec,
+    filter_classes,
+    random_frequency_relation,
+)
 from .treble_py import render, render_batch, available_filters, available_sources
 import sys as _sys
 
