@@ -9,6 +9,10 @@ Exposes offline headless rendering of `GraphSpec` synthesis graphs to numpy arra
   pool (the GIL is released; order is preserved)
 - `GraphSpec` / `MultiSourceSpec` / `SourceSpec` / `ADSRSpec` dataclasses, with
   `GraphSpec.random()`, `.canonical()`, `.render()`, and `GraphSpec.render_batch()`
+- `GraphSpec.random(complexity, archetype=..., rng=...)` samples realistic
+  patches from sound-design archetypes (`treble_py.ARCHETYPES`: bass, lead, pad,
+  keys, bell, percussive); `GraphSpec.random_uniform()` spans the whole
+  parameter space instead
 - `available_filters()` / `available_sources()` — live registry metadata
 
 ## Installation in the treble-ml workspace

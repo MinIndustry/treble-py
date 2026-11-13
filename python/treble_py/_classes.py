@@ -172,8 +172,22 @@ class ADSRSpec:
         }
 
     @staticmethod
-    def random() -> ADSRSpec:
-        """Returns a random ADSR spec in believable ranges"""
+    def random(
+        note_len: float | None = None,
+        tail: float | None = None,
+        rng: np.random.Generator | None = None,
+    ) -> ADSRSpec:
+        """Returns a random ADSR spec in believable ranges.
+
+        With `note_len` (seconds the note is held), attack and decay are drawn
+        inside the note, leaving at least 20% of it at sustain, and with `tail`
+        the release fits in the time after note-off. Without them, each segment
+        is drawn independently (the pre-0.4.0 behaviour), which often yields
+        envelopes longer than the note they shape.
+        """
+        if note_len is not None:
+            return ADSRSpec._random_in_budget(note_len, tail, rng or np.random.default_rng(
+                np.random.randint(0, 2**31 - 1)))
 
         # Sustain is uniform over [0;1]
         sustain = np.random.uniform(0, 1)
@@ -270,6 +284,27 @@ def _check_relation(rel: Any) -> None:
             f"frequency_relation must be 'identity', '<kind>:<value>' or a single-key dict "
             f"with kind in {RELATION_KINDS!r}, got {rel!r}"
         )
+
+
+def _adsr_in_budget(note_len: float, tail: float | None, rng: np.random.Generator) -> ADSRSpec:
+    sustain = float(rng.uniform(0.0, 1.0))
+    budget = note_len * float(rng.uniform(0.15, 0.8))
+    frac = float(rng.beta(2.0, 3.0))
+    atk = max(0.001, budget * frac)
+    dcy = max(0.001, budget * (1.0 - frac))
+    rel_cap = 4.0 if tail is None else max(0.001, tail * float(rng.uniform(0.2, 0.95)))
+    rel = max(0.001, min(float(np.exp(rng.normal(-1.1, 0.45))), rel_cap))
+    peak = float(rng.uniform(0.8, 1.0))
+    lo, hi = min(sustain, peak), max(sustain, peak)
+    return ADSRSpec(
+        attack=(atk, peak, float(rng.uniform(0, atk)), float(rng.uniform(0, peak))),
+        decay=(dcy, sustain, float(rng.uniform(0, dcy)), float(rng.uniform(lo, hi))),
+        sustain=sustain,
+        release=(rel, 0.0, float(rng.uniform(0, rel)), float(rng.uniform(0, sustain))),
+    )
+
+
+ADSRSpec._random_in_budget = staticmethod(_adsr_in_budget)
 
 
 @dataclass
@@ -380,14 +415,23 @@ def _conn_sort_key(conn: dict) -> tuple:
     return (order, exit_idx, entry_idx)
 
 
-def _renumber_connections(connections: list, old_to_new: dict[int, int]) -> list:
+def _renumber_connections(
+    connections: list,
+    old_to_new: dict[int, int],
+    src_old_to_new: dict[int, int] | None = None,
+) -> list:
+    src = src_old_to_new or {}
     result = []
     for conn in connections:
         if "SourceSink" in conn:
-            result.append(conn)
+            d = conn["SourceSink"]
+            result.append({"SourceSink": {"source": src.get(d["source"], d["source"]), "sink": d["sink"]}})
         elif "SourceFilter" in conn:
             d = conn["SourceFilter"]
-            result.append({"SourceFilter": {"source": d["source"], "filter": old_to_new[d["filter"]]}})
+            result.append({"SourceFilter": {
+                "source": src.get(d["source"], d["source"]),
+                "filter": old_to_new[d["filter"]],
+            }})
         elif "FilterFilter" in conn:
             d = conn["FilterFilter"]
             result.append({"FilterFilter": {
@@ -510,6 +554,7 @@ class GraphSpec:
         Rules applied in order:
           1. Sources within each MultiSourceSpec: sorted by (waveform, -sustain).
           2. MultiSourceSpec blocks: sorted by (-n_sources, dominant_wf, -glob_ampl.sustain).
+             Source indices in connections are renumbered.
           3. Filters: topological sort (signal path order); ties broken by type_id then
              primary parameter value. Filter indices in connections are renumbered.
           4. Connections: sorted by type (SourceSink < SourceFilter < FilterFilter <
@@ -536,7 +581,9 @@ class GraphSpec:
             dominant = min(wf_counts, key=lambda w: (-wf_counts[w], w))
             return (-len(ms.sources), dominant, -ms.glob_ampl.sustain)
 
-        canonical_multis = sorted(canonical_multis, key=_ms_key)
+        block_order = sorted(range(len(canonical_multis)), key=lambda i: _ms_key(canonical_multis[i]))
+        src_old_to_new = {old: new for new, old in enumerate(block_order)}
+        canonical_multis = [canonical_multis[i] for i in block_order]
 
         # 3. Topological sort of filters (Kahn's algorithm)
         n = len(self.filters)
@@ -575,10 +622,7 @@ class GraphSpec:
             canonical_filters = [self.filters[old] for old in topo]
 
         # 4. Renumber and sort connections
-        if old_to_new:
-            canonical_connections = _renumber_connections(self.connections, old_to_new)
-        else:
-            canonical_connections = sorted(self.connections, key=_conn_sort_key)
+        canonical_connections = _renumber_connections(self.connections, old_to_new, src_old_to_new)
 
         return GraphSpec(
             note=self.note,
@@ -593,8 +637,50 @@ class GraphSpec:
         )
 
     @staticmethod
-    def random(complexity: float = 0.5) -> GraphSpec:
-        """Generate a random but believable GraphSpec.
+    def random(
+        complexity: float = 0.5,
+        *,
+        archetype: str | None = None,
+        rng: np.random.Generator | None = None,
+    ) -> GraphSpec:
+        """Generate a random patch that resembles a real instrument.
+
+        A patch is drawn from one of the sound-design archetypes in
+        `ARCHETYPES` ("bass", "lead", "pad", "keys", "bell", "percussive"),
+        each with its own priors over note range, voices and frequency
+        relations (detunes, sub-octaves, harmonic or inharmonic partials),
+        amplitude envelope and effect chain. Envelopes complete inside the
+        held note, cutoffs are placed relative to the note's pitch, chains
+        follow signal flow (tone -> drive -> dynamics -> modulation ->
+        time/space), and the duration covers every release and effect tail.
+        The result is in canonical form.
+
+        Args:
+            complexity: Float in [0.0, 1.0]. Scales voice count, the chance of
+                optional stages (drive, compression, modulation, delay,
+                reverb, limiter) and of routing time effects as parallel sends.
+            archetype: One of `ARCHETYPES`, or None to draw one by
+                `ARCHETYPE_WEIGHTS`.
+            rng: Generator for reproducible draws. Defaults to one seeded from
+                numpy's global state, so `np.random.seed` also applies.
+
+        See `random_uniform()` for the previous sampler, which spans the whole
+        parameter space rather than musical regions of it.
+        """
+        from ._archetypes import sample
+
+        if rng is None:
+            rng = np.random.default_rng(np.random.randint(0, 2**31 - 1))
+        return sample(complexity, archetype, rng)
+
+    @staticmethod
+    def random_uniform(complexity: float = 0.5) -> GraphSpec:
+        """Generate a random GraphSpec spanning the whole parameter space.
+
+        This was `random()` before 0.4.0. Patches are mostly not musical
+        (late note starts, envelopes longer than the note, uniformly chosen
+        filters in random order); use it to stress the renderer, and
+        `random()` for realistic patches.
 
         Args:
             complexity: Float in [0.0, 1.0].
