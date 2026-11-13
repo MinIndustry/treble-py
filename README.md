@@ -35,3 +35,11 @@ uv sync --reinstall-package treble-py
 The `extension-module` pyo3 feature is only enabled by maturin at wheel-build
 time (see `pyproject.toml`), so plain `cargo test` links against libpython and
 works out of the box.
+
+## Python tests
+
+```bash
+uv venv && uv pip install "maturin>=1.5,<2.0" pytest numpy
+uv run --no-project maturin develop --release
+uv run --no-project pytest -q tests
+```

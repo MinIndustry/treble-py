@@ -49,7 +49,11 @@ def available_filters() -> list[dict[str, Any]]:
     """Returns metadata for all registered filter types.
 
     Returns:
-        list of dicts, each with keys: name, description, inputs, outputs.
+        list of dicts, each with keys: name, type_id, description, inputs, outputs.
+        Each input carries ``label``, ``parameter`` (None for audio ports),
+        ``access`` ("user" or "engine") and ``scale`` ("linear",
+        "logarithmic" or None). Engine-owned parameters such as
+        ``sample_rate`` are set by the renderer; a spec value for them is ignored.
 
     Example:
 

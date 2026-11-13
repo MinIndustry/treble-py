@@ -127,6 +127,7 @@ pub struct FilterSpec {
 /// - `"ratio:F"` — frequency * F
 /// - `"semitones:I"` — frequency * 2^(I/12)
 /// - `"offset:F"` — frequency + F Hz
+/// - `"constant:F"` — fixed F Hz, independent of the note
 /// - `{"harmonic": N}`, `{"ratio": F}`, `{"semitones": I}`, `{"offset": F}`, `{"constant": F}`
 #[derive(Debug, Deserialize, Default)]
 #[serde(untagged)]

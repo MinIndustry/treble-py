@@ -36,6 +36,11 @@ fn parse_relation_string(s: &str) -> FrequencyRelation {
     {
         return FrequencyRelation::Offset(f);
     }
+    if let Some(rest) = s.strip_prefix("constant:")
+        && let Ok(f) = rest.parse::<f32>()
+    {
+        return FrequencyRelation::Constant(f);
+    }
     FrequencyRelation::Identity
 }
 
@@ -52,5 +57,34 @@ fn parse_relation_object(map: &HashMap<String, serde_json::Value>) -> FrequencyR
         FrequencyRelation::Constant(v as f32)
     } else {
         FrequencyRelation::Identity
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn string_and_object_forms_agree() {
+        let string = |s: &str| build_frequency_relation(&FrequencyRelationSpec::Tagged(s.into()));
+        let object = |k: &str, v: serde_json::Value| {
+            build_frequency_relation(&FrequencyRelationSpec::Object(HashMap::from([(
+                k.into(),
+                v,
+            )])))
+        };
+        for (s, k, v) in [
+            ("harmonic:3", "harmonic", serde_json::json!(3)),
+            ("ratio:2", "ratio", serde_json::json!(2.0)),
+            ("semitones:7", "semitones", serde_json::json!(7)),
+            ("offset:100", "offset", serde_json::json!(100.0)),
+            ("constant:440", "constant", serde_json::json!(440.0)),
+        ] {
+            assert_eq!(
+                format!("{:?}", string(s)),
+                format!("{:?}", object(k, v)),
+                "{s}"
+            );
+        }
     }
 }
