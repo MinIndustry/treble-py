@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.1
+
+- Build against `treble` 0.6.1. `BandPass` now follows its `low` and `high`
+  parameters; before, every render used the default 1000 Hz band whatever the
+  spec said. A reversed band (`low > high`) renders the same as the forward one.
+  Renders of patches that use `BandPass` change.
+- `BandPass.sample_rate` is now engine-owned like the other rate-dependent
+  filters: it is no longer a field, and `BandPass(sample_rate=...)` raises
+  `TypeError`.
+
 ## 0.4.0
 
 - Build against crates.io `treble` 0.6.0 and `treble-meta` 0.4.0 instead of git

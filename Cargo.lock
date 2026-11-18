@@ -497,9 +497,9 @@ dependencies = [
 
 [[package]]
 name = "treble"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12b2dc813992520e510d770a15fd2f1ab5fae4a1521eaeac3a7f33b71e7d309e"
+checksum = "0521c38b9935a955f0d3d006eaad19ee570a2229f16483ee7b8bd0239b89b6ce"
 dependencies = [
  "dyn-clone",
  "hound",
@@ -543,7 +543,7 @@ dependencies = [
 
 [[package]]
 name = "treble-py"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "inventory",
  "numpy",
