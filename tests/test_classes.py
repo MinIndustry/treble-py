@@ -47,7 +47,7 @@ def test_engine_owned_parameters_are_not_fields():
                 assert data["field_name"] not in fields
             else:
                 assert data["field_name"] in fields
-    assert seen_engine == 9  # sample_rate on the nine rate-dependent filters
+    assert seen_engine == 10  # sample_rate on the ten rate-dependent filters
 
 
 def test_engine_owned_parameters_are_rejected_as_kwargs():
@@ -146,3 +146,26 @@ def test_random_graph_specs_render_finite_audio():
         assert audio.ndim == 2 and audio.shape[1] == 2
         assert audio.shape[0] == math.ceil(spec.duration * spec.sample_rate)
         assert all("sample_rate" not in f.to_spec()["params"] for f in spec.filters)
+
+
+def test_bandpass_follows_its_band():
+    """treble 0.6.1: BandPass used to keep its default band whatever low/high said."""
+    S, M = treble_py.SourceSpec, treble_py.MultiSourceSpec
+    BandPass = next(cls for cls in filter_classes.values() if cls.__name__ == "BandPass")
+
+    def render(low, high):
+        return treble_py.GraphSpec(
+            note=48, note_on=0.0, note_off=0.4, duration=0.5,
+            sources=[M(sources=[S(waveform="saw")])],
+            filters=[BandPass(low=low, high=high)],
+            connections=[{"SourceFilter": {"source": 0, "filter": 0}},
+                         {"FilterSink": {"filter": 0, "sink": 0}}],
+        ).render()
+
+    def centroid(audio):
+        mag = np.abs(np.fft.rfft(audio[:, 0]))
+        return float((np.fft.rfftfreq(len(audio), 1 / 44100) * mag).sum() / mag.sum())
+
+    low, high = render(150.0, 400.0), render(3000.0, 6000.0)
+    assert centroid(high) > 2 * centroid(low)
+    np.testing.assert_allclose(render(400.0, 150.0), low, atol=1e-6)
