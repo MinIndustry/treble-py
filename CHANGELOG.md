@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.2
+
+- Envelope segments are read as `(duration, level, control_time,
+  control_level)`, the order `ADSRSpec` documents and every writer uses. The
+  decay segment read its first two values the other way round: it fell to
+  `decay[0]` over `decay[1]` seconds, so a decay written as (0.1 s, level 0.8)
+  fell to 0.1 over 0.8 s and held 0.1.
+- A segment's `control_time` is in seconds from its start, as documented; the
+  engine wants a fraction of the segment, so it is now divided by the
+  duration. It used to be passed straight through and clamped to [0, 1], so a
+  curve's shape changed with the segment's length.
+- Renders of every patch with an envelope change.
+
 ## 0.4.1
 
 - Build against `treble` 0.6.1. `BandPass` now follows its `low` and `high`
